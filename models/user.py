@@ -1,18 +1,24 @@
 #!/usr/bin/python3
-""" 0x00. AirBnB clone - The console """
+
+"""
+User class
+"""
+
 from .base_model import BaseModel
 
-
 class User(BaseModel):
-    """Defines attributes for `User`.
+    """
+    User class inheriting from BaseModel.
+    
     Attributes:
-        email (str)
-        password (str)
-        first_name (str)
-        last_name (str)
+        email (str): Email address of the user.
+        password (str): Password of the user.
+        first_name (str): First name of the user.
+        last_name (str): Last name of the user.
     """
 
     email = ""
     password = ""
     first_name = ""
     last_name = ""
+
