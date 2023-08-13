@@ -1,13 +1,12 @@
 #!/usr/bin/python3
-"""Amenity class"""
+""" class Amenity"""
 
 from models.base_model import BaseModel
 
 
 class Amenity(BaseModel):
     """
-    Amenity class
-    name(str) - public class attribute
+    name(str) - pub. class attribute
     """
 
     name = ""

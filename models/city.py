@@ -1,13 +1,13 @@
 #!/usr/bin/python3
-"""City class"""
-
+""" class city """
 from models.base_model import BaseModel
+
 
 class City(BaseModel):
     """
-    City class
-    state_id(str) - public class attribute
-    name(str) - public class attribute
+    public class attributes
+    state_id(str)
+    name(str)
     """
 
     state_id = ""
