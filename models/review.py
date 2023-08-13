@@ -1,23 +1,18 @@
-#!/usr/bin/python3
-"""
-Defines the Review class, a subclass of BaseModel.
-"""
+#!usr/bin/python3
+"""class Review"""
 
 from models.base_model import BaseModel
 
+
 class Review(BaseModel):
     """
-    Represents a review, inheriting from the BaseModel class.
+    Public class attributes:
 
-    Attributes:
-        place_id (str): The identifier of the associated place.
-        user_id (str): The identifier of the user who wrote the review.
-        text (str): The content of the review.
+    place_id: string - empty string: it will be the Place.id
+    user_id: string - empty string: it will be the User.id
+    text: string - empty string
     """
 
     place_id = ""
-    """The identifier of the associated place."""
     user_id = ""
-    """The identifier of the user who wrote the review."""
     text = ""
-    """The content of the review."""

@@ -1,196 +1,93 @@
 #!/usr/bin/python3
-"""
-Defines unit tests for the User class in the models/user.py module.
-
-Unittest classes:
-    TestUserInstantiation
-    TestUserSave
-    TestUserToDict
-"""
-
-import os
-import models
+"""Unittest for user([..]) after task 9"""
 import unittest
-from datetime import datetime
-from time import sleep
+import json
+import os
+from shutil import copy2
+
 from models.user import User
-
-class TestUserInstantiation(unittest.TestCase):
-    """Unit tests for testing instantiation of the User class."""
-
-    def test_no_args_instantiates(self):
-        self.assertEqual(User, type(User()))
-
-    def test_new_instance_stored_in_objects(self):
-        self.assertIn(User(), models.storage.all().values())
-
-    def test_id_is_public_str(self):
-        self.assertEqual(str, type(User().id))
-
-    def test_created_at_is_public_datetime(self):
-        self.assertEqual(datetime, type(User().created_at))
-
-    def test_updated_at_is_public_datetime(self):
-        self.assertEqual(datetime, type(User().updated_at))
-
-    def test_email_is_public_str(self):
-        self.assertEqual(str, type(User.email))
-
-    def test_password_is_public_str(self):
-        self.assertEqual(str, type(User.password))
-
-    def test_first_name_is_public_str(self):
-        self.assertEqual(str, type(User.first_name))
-
-    def test_last_name_is_public_str(self):
-        self.assertEqual(str, type(User.last_name))
-
-    def test_two_users_unique_ids(self):
-        user1 = User()
-        user2 = User()
-        self.assertNotEqual(user1.id, user2.id)
-
-    def test_two_users_different_created_at(self):
-        user1 = User()
-        sleep(0.05)
-        user2 = User()
-        self.assertLess(user1.created_at, user2.created_at)
-
-    def test_two_users_different_updated_at(self):
-        user1 = User()
-        sleep(0.05)
-        user2 = User()
-        self.assertLess(user1.updated_at, user2.updated_at)
-
-    def test_str_representation(self):
-        dt = datetime.today()
-        dt_repr = repr(dt)
-        user = User()
-        user.id = "123456"
-        user.created_at = user.updated_at = dt
-        user_str = user.__str__()
-        self.assertIn("[User] (123456)", user_str)
-        self.assertIn("'id': '123456'", user_str)
-        self.assertIn("'created_at': " + dt_repr, user_str)
-        self.assertIn("'updated_at': " + dt_repr, user_str)
-
-    def test_args_unused(self):
-        user = User(None)
-        self.assertNotIn(None, user.__dict__.values())
-
-    def test_instantiation_with_kwargs(self):
-        dt = datetime.today()
-        dt_iso = dt.isoformat()
-        user = User(id="345", created_at=dt_iso, updated_at=dt_iso)
-        self.assertEqual(user.id, "345")
-        self.assertEqual(user.created_at, dt)
-        self.assertEqual(user.updated_at, dt)
-
-    def test_instantiation_with_None_kwargs(self):
-        with self.assertRaises(TypeError):
-            User(id=None, created_at=None, updated_at=None)
+from models import storage
 
 
-class TestUserSave(unittest.TestCase):
-    """Unit tests for testing the save method of the User class."""
+class TestUser(unittest.TestCase):
+    """Tests `User` class.
+    For interactions with *args and **kwargs, see test_base_model.
+    Attributes:
+        __objects_backup (dict): copy of current dict of `FileStorage` objects
+        json_file (str): filename for JSON file of `FileStorage` objects
+        json_file_backup (str): filename for backup of `json_file`
+    """
+    __objects_backup = storage._FileStorage__objects
+    json_file = storage._FileStorage__file_path
+    json_file_backup = storage._FileStorage__file_path + '.bup'
 
     @classmethod
-    def setUp(cls):
+    def setUpClass(cls):
+        """Setup for all tests in module.
+        """
+        storage._FileStorage__objects = dict()
+        if os.path.exists(cls.json_file):
+            copy2(cls.json_file, cls.json_file_backup)
+            os.remove(cls.json_file)
+
+    @classmethod
+    def tearDownClass(cls):
+        """Teardown after all tests in module.
+        """
+        storage._FileStorage__objects = cls.__objects_backup
+        if os.path.exists(cls.json_file_backup):
+            copy2(cls.json_file_backup, cls.json_file)
+            os.remove(cls.json_file_backup)
+
+    def tearDown(self):
+        """Any needed cleanup, per test method.
+        """
         try:
-            os.rename("file.json", "tmp")
-        except IOError:
+            del (u1, u2)
+        except NameError:
             pass
+        storage._FileStorage__objects = dict()
+        if os.path.exists(type(self).json_file):
+            os.remove(type(self).json_file)
 
-    def tearDown(cls):
-        try:
-            os.remove("file.json")
-        except IOError:
-            pass
-        try:
-            os.rename("tmp", "file.json")
-        except IOError:
-            pass
+    def test_User(self):
+        """Task 9
+        Tests `User` class.
+        """
+        # Normal use: no args
+        u1 = User()
+        self.assertIsInstance(u1, User)
 
-    def test_one_save(self):
-        user_instance = User()
-        sleep(0.05)
-        first_updated_at = user_instance.updated_at
-        user_instance.save()
-        self.assertLess(first_updated_at, user_instance.updated_at)
+        # attr `email` defaults to empty string
+        self.assertIsInstance(u1.email, str)
+        self.assertEqual(u1.email, '')
 
-    def test_two_saves(self):
-        user_instance = User()
-        sleep(0.05)
-        first_updated_at = user_instance.updated_at
-        user_instance.save()
-        second_updated_at = user_instance.updated_at
-        self.assertLess(first_updated_at, second_updated_at)
-        sleep(0.05)
-        user_instance.save()
-        self.assertLess(second_updated_at, user_instance.updated_at)
+        # attr `password` defaults to empty string
+        self.assertIsInstance(u1.password, str)
+        self.assertEqual(u1.password, '')
 
-    def test_save_with_arg(self):
-        user_instance = User()
-        with self.assertRaises(TypeError):
-            user_instance.save(None)
+        # attr `first_name` defaults to empty string
+        self.assertIsInstance(u1.first_name, str)
+        self.assertEqual(u1.first_name, '')
 
-    def test_save_updates_file(self):
-        user_instance = User()
-        user_instance.save()
-        user_id = "User." + user_instance.id
-        with open("file.json", "r") as f:
-            self.assertIn(user_id, f.read())
+        # attr `last_name` defaults to empty string
+        self.assertIsInstance(u1.last_name, str)
+        self.assertEqual(u1.last_name, '')
 
+        # User can be serialized to JSON by FileStorage
+        u1.email = 'test1'
+        u1.password = 'test2'
+        u1.first_name = 'test3'
+        u1.last_name = 'test4'
+        self.assertIn(u1, storage._FileStorage__objects.values())
+        u1.save()
+        with open(storage._FileStorage__file_path, encoding='utf-8') as file:
+            content = file.read()
+        key = u1.__class__.__name__ + '.' + u1.id
+        self.assertIn(key, json.loads(content))
 
-class TestUserToDict(unittest.TestCase):
-    """Unit tests for testing the to_dict method of the User class."""
-
-    def test_to_dict_type(self):
-        self.assertTrue(dict, type(User().to_dict()))
-
-    def test_to_dict_contains_correct_keys(self):
-        user_instance = User()
-        self.assertIn("id", user_instance.to_dict())
-        self.assertIn("created_at", user_instance.to_dict())
-        self.assertIn("updated_at", user_instance.to_dict())
-        self.assertIn("__class__", user_instance.to_dict())
-
-    def test_to_dict_contains_added_attributes(self):
-        user_instance = User()
-        user_instance.middle_name = "Holberton"
-        user_instance.my_number = 98
-        self.assertEqual("Holberton", user_instance.middle_name)
-        self.assertIn("my_number", user_instance.to_dict())
-
-    def test_to_dict_datetime_attributes_are_strs(self):
-        user_instance = User()
-        user_dict = user_instance.to_dict()
-        self.assertEqual(str, type(user_dict["id"]))
-        self.assertEqual(str, type(user_dict["created_at"]))
-        self.assertEqual(str, type(user_dict["updated_at"]))
-
-    def test_to_dict_output(self):
-        dt = datetime.today()
-        user_instance = User()
-        user_instance.id = "123456"
-        user_instance.created_at = user_instance.updated_at = dt
-        expected_dict = {
-            'id': '123456',
-            '__class__': 'User',
-            'created_at': dt.isoformat(),
-            'updated_at': dt.isoformat(),
-        }
-        self.assertDictEqual(user_instance.to_dict(), expected_dict)
-
-    def test_contrast_to_dict_dunder_dict(self):
-        user_instance = User()
-        self.assertNotEqual(user_instance.to_dict(), user_instance.__dict__)
-
-    def test_to_dict_with_arg(self):
-        user_instance = User()
-        with self.assertRaises(TypeError):
-            user_instance.to_dict(None)
-
-
-if __name__ == "__main__":
-    unittest.main()
+        # User can be deserialized from JSON by FileStorage
+        self.assertIn(key, storage._FileStorage__objects.keys())
+        storage._FileStorage__objects = dict()
+        storage.reload()
+        self.assertIn(key, storage._FileStorage__objects.keys())

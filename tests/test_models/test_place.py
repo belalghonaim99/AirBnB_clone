@@ -1,250 +1,128 @@
 #!/usr/bin/python3
-"""
-Defines unit tests for the Place class in the models/place.py module.
-
-Unittest classes:
-    TestPlaceInstantiation
-    TestPlaceSave
-    TestPlaceToDict
-"""
-
-import os
-import models
+"""Unittest for place([..]) after task 9"""
 import unittest
-from datetime import datetime
-from time import sleep
+import json
+import os
+from shutil import copy2
+
 from models.place import Place
-
-class TestPlaceInstantiation(unittest.TestCase):
-    """Unit tests for testing instantiation of the Place class."""
-
-    def test_no_args_instantiates(self):
-        self.assertEqual(Place, type(Place()))
-
-    def test_new_instance_stored_in_objects(self):
-        self.assertIn(Place(), models.storage.all().values())
-
-    def test_id_is_public_str(self):
-        self.assertEqual(str, type(Place().id))
-
-    def test_created_at_is_public_datetime(self):
-        self.assertEqual(datetime, type(Place().created_at))
-
-    def test_updated_at_is_public_datetime(self):
-        self.assertEqual(datetime, type(Place().updated_at))
-
-    def test_city_id_is_public_class_attribute(self):
-        place_instance = Place()
-        self.assertEqual(str, type(Place.city_id))
-        self.assertIn("city_id", dir(place_instance))
-        self.assertNotIn("city_id", place_instance.__dict__)
-
-    def test_user_id_is_public_class_attribute(self):
-        place_instance = Place()
-        self.assertEqual(str, type(Place.user_id))
-        self.assertIn("user_id", dir(place_instance))
-        self.assertNotIn("user_id", place_instance.__dict__)
-
-    def test_name_is_public_class_attribute(self):
-        place_instance = Place()
-        self.assertEqual(str, type(Place.name))
-        self.assertIn("name", dir(place_instance))
-        self.assertNotIn("name", place_instance.__dict__)
-
-    def test_description_is_public_class_attribute(self):
-        place_instance = Place()
-        self.assertEqual(str, type(Place.description))
-        self.assertIn("description", dir(place_instance))
-        self.assertNotIn("desctiption", place_instance.__dict__)
-
-    def test_number_rooms_is_public_class_attribute(self):
-        place_instance = Place()
-        self.assertEqual(int, type(Place.number_rooms))
-        self.assertIn("number_rooms", dir(place_instance))
-        self.assertNotIn("number_rooms", place_instance.__dict__)
-
-    def test_number_bathrooms_is_public_class_attribute(self):
-        place_instance = Place()
-        self.assertEqual(int, type(Place.number_bathrooms))
-        self.assertIn("number_bathrooms", dir(place_instance))
-        self.assertNotIn("number_bathrooms", place_instance.__dict__)
-
-    def test_max_guest_is_public_class_attribute(self):
-        place_instance = Place()
-        self.assertEqual(int, type(Place.max_guest))
-        self.assertIn("max_guest", dir(place_instance))
-        self.assertNotIn("max_guest", place_instance.__dict__)
-
-    def test_price_by_night_is_public_class_attribute(self):
-        place_instance = Place()
-        self.assertEqual(int, type(Place.price_by_night))
-        self.assertIn("price_by_night", dir(place_instance))
-        self.assertNotIn("price_by_night", place_instance.__dict__)
-
-    def test_latitude_is_public_class_attribute(self):
-        place_instance = Place()
-        self.assertEqual(float, type(Place.latitude))
-        self.assertIn("latitude", dir(place_instance))
-        self.assertNotIn("latitude", place_instance.__dict__)
-
-    def test_longitude_is_public_class_attribute(self):
-        place_instance = Place()
-        self.assertEqual(float, type(Place.longitude))
-        self.assertIn("longitude", dir(place_instance))
-        self.assertNotIn("longitude", place_instance.__dict__)
-
-    def test_amenity_ids_is_public_class_attribute(self):
-        place_instance = Place()
-        self.assertEqual(list, type(Place.amenity_ids))
-        self.assertIn("amenity_ids", dir(place_instance))
-        self.assertNotIn("amenity_ids", place_instance.__dict__)
-
-    def test_two_places_unique_ids(self):
-        place1 = Place()
-        place2 = Place()
-        self.assertNotEqual(place1.id, place2.id)
-
-    def test_two_places_different_created_at(self):
-        place1 = Place()
-        sleep(0.05)
-        place2 = Place()
-        self.assertLess(place1.created_at, place2.created_at)
-
-    def test_two_places_different_updated_at(self):
-        place1 = Place()
-        sleep(0.05)
-        place2 = Place()
-        self.assertLess(place1.updated_at, place2.updated_at)
-
-    def test_str_representation(self):
-        dt = datetime.today()
-        dt_repr = repr(dt)
-        place = Place()
-        place.id = "123456"
-        place.created_at = place.updated_at = dt
-        place_str = place.__str__()
-        self.assertIn("[Place] (123456)", place_str)
-        self.assertIn("'id': '123456'", place_str)
-        self.assertIn("'created_at': " + dt_repr, place_str)
-        self.assertIn("'updated_at': " + dt_repr, place_str)
-
-    def test_args_unused(self):
-        place = Place(None)
-        self.assertNotIn(None, place.__dict__.values())
-
-    def test_instantiation_with_kwargs(self):
-        dt = datetime.today()
-        dt_iso = dt.isoformat()
-        place = Place(id="345", created_at=dt_iso, updated_at=dt_iso)
-        self.assertEqual(place.id, "345")
-        self.assertEqual(place.created_at, dt)
-        self.assertEqual(place.updated_at, dt)
-
-    def test_instantiation_with_None_kwargs(self):
-        with self.assertRaises(TypeError):
-            Place(id=None, created_at=None, updated_at=None)
+from models import storage
 
 
-class TestPlaceSave(unittest.TestCase):
-    """Unit tests for testing the save method of the Place class."""
+class TestPlace(unittest.TestCase):
+    """Tests `Place` class.
+    For interactions with *args and **kwargs, see test_base_model.
+    Attributes:
+        __objects_backup (dict): copy of current dict of `FileStorage` objects
+        json_file (str): filename for JSON file of `FileStorage` objects
+        json_file_backup (str): filename for backup of `json_file`
+    """
+    __objects_backup = storage._FileStorage__objects
+    json_file = storage._FileStorage__file_path
+    json_file_backup = storage._FileStorage__file_path + '.bup'
 
     @classmethod
-    def setUp(cls):
+    def setUpClass(cls):
+        """Setup for all tests in module.
+        """
+        storage._FileStorage__objects = dict()
+        if os.path.exists(cls.json_file):
+            copy2(cls.json_file, cls.json_file_backup)
+            os.remove(cls.json_file)
+
+    @classmethod
+    def tearDownClass(cls):
+        """Teardown after all tests in module.
+        """
+        storage._FileStorage__objects = cls.__objects_backup
+        if os.path.exists(cls.json_file_backup):
+            copy2(cls.json_file_backup, cls.json_file)
+            os.remove(cls.json_file_backup)
+
+    def tearDown(self):
+        """Any needed cleanup, per test method.
+        """
         try:
-            os.rename("file.json", "tmp")
-        except IOError:
+            del (p1, p2)
+        except NameError:
             pass
+        storage._FileStorage__objects = dict()
+        if os.path.exists(type(self).json_file):
+            os.remove(type(self).json_file)
 
-    def tearDown(cls):
-        try:
-            os.remove("file.json")
-        except IOError:
-            pass
-        try:
-            os.rename("tmp", "file.json")
-        except IOError:
-            pass
+    def test_Place(self):
+        """Task 9
+        Tests `Place` class.
+        """
+        # Normal use: no args
+        p1 = Place()
+        self.assertIsInstance(p1, Place)
 
-    def test_one_save(self):
-        place_instance = Place()
-        sleep(0.05)
-        first_updated_at = place_instance.updated_at
-        place_instance.save()
-        self.assertLess(first_updated_at, place_instance.updated_at)
+        # attr `city_id` defaults to empty string
+        self.assertIsInstance(p1.city_id, str)
+        self.assertEqual(p1.city_id, '')
 
-    def test_two_saves(self):
-        place_instance = Place()
-        sleep(0.05)
-        first_updated_at = place_instance.updated_at
-        place_instance.save()
-        second_updated_at = place_instance.updated_at
-        self.assertLess(first_updated_at, second_updated_at)
-        sleep(0.05)
-        place_instance.save()
-        self.assertLess(second_updated_at, place_instance.updated_at)
+        # attr `user_id` defaults to empty string
+        self.assertIsInstance(p1.user_id, str)
+        self.assertEqual(p1.user_id, '')
 
-    def test_save_with_arg(self):
-        place_instance = Place()
-        with self.assertRaises(TypeError):
-            place_instance.save(None)
+        # attr `name` defaults to empty string
+        self.assertIsInstance(p1.name, str)
+        self.assertEqual(p1.name, '')
 
-    def test_save_updates_file(self):
-        place_instance = Place()
-        place_instance.save()
-        place_id = "Place." + place_instance.id
-        with open("file.json", "r") as f:
-            self.assertIn(place_id, f.read())
+        # attr `description` defaults to empty string
+        self.assertIsInstance(p1.description, str)
+        self.assertEqual(p1.description, '')
 
+        # attr `number_rooms` defaults to int 0
+        self.assertIsInstance(p1.number_rooms, int)
+        self.assertEqual(p1.number_rooms, 0)
 
-class TestPlaceToDict(unittest.TestCase):
-    """Unit tests for testing the to_dict method of the Place class."""
+        # attr `number_bathrooms` defaults to int 0
+        self.assertIsInstance(p1.number_bathrooms, int)
+        self.assertEqual(p1.number_bathrooms, 0)
 
-    def test_to_dict_type(self):
-        self.assertTrue(dict, type(Place().to_dict()))
+        # attr `max_guest` defaults to empty int 0
+        self.assertIsInstance(p1.max_guest, int)
+        self.assertEqual(p1.max_guest, 0)
 
-    def test_to_dict_contains_correct_keys(self):
-        place_instance = Place()
-        self.assertIn("id", place_instance.to_dict())
-        self.assertIn("created_at", place_instance.to_dict())
-        self.assertIn("updated_at", place_instance.to_dict())
-        self.assertIn("__class__", place_instance.to_dict())
+        # attr `price_by_night` defaults to int 0
+        self.assertIsInstance(p1.price_by_night, int)
+        self.assertEqual(p1.price_by_night, 0)
 
-    def test_to_dict_contains_added_attributes(self):
-        place_instance = Place()
-        place_instance.middle_name = "Holberton"
-        place_instance.my_number = 98
-        self.assertEqual("Holberton", place_instance.middle_name)
-        self.assertIn("my_number", place_instance.to_dict())
+        # attr `latitude` defaults to float 0.0
+        self.assertIsInstance(p1.latitude, float)
+        self.assertEqual(p1.latitude, 0.0)
 
-    def test_to_dict_datetime_attributes_are_strs(self):
-        place_instance = Place()
-        place_dict = place_instance.to_dict()
-        self.assertEqual(str, type(place_dict["id"]))
-        self.assertEqual(str, type(place_dict["created_at"]))
-        self.assertEqual(str, type(place_dict["updated_at"]))
+        # attr `longitude` defaults to float 0.0
+        self.assertIsInstance(p1.longitude, float)
+        self.assertEqual(p1.longitude, 0.0)
 
-    def test_to_dict_output(self):
-        dt = datetime.today()
-        place_instance = Place()
-        place_instance.id = "123456"
-        place_instance.created_at = place_instance.updated_at = dt
-        expected_dict = {
-            'id': '123456',
-            '__class__': 'Place',
-            'created_at': dt.isoformat(),
-            'updated_at': dt.isoformat(),
-        }
-        self.assertDictEqual(place_instance.to_dict(), expected_dict)
+        # attr `amenity_ids` defaults to empty list
+        self.assertIsInstance(p1.amenity_ids, list)
+        self.assertEqual(p1.amenity_ids, [])
 
-    def test_contrast_to_dict_dunder_dict(self):
-        place_instance = Place()
-        self.assertNotEqual(place_instance.to_dict(), place_instance.__dict__)
+        # Place can be serialized to JSON by FileStorage
+        p1.city_id = 'test1'
+        p1.user_id = 'test2'
+        p1.name = 'test3'
+        p1.description = 'test4'
+        p1.number_rooms = 1
+        p1.number_bathrooms = -2
+        p1.max_guest = 3
+        p1.price_by_night = -4
+        p1.latitude = -5.5
+        p1.longitude = 6.6
+        p1.amenity_ids = ['id1', 'id2']
+        self.assertIn(p1, storage._FileStorage__objects.values())
+        p1.save()
+        with open(storage._FileStorage__file_path, encoding='utf-8') as file:
+            content = file.read()
+        key = p1.__class__.__name__ + '.' + p1.id
+        self.assertIn(key, json.loads(content))
 
-    def test_to_dict_with_arg(self):
-        place_instance = Place()
-        with self.assertRaises(TypeError):
-            place_instance.to_dict(None)
-
-
-if __name__ == "__main__":
-    unittest.main()
+        # Place can be deserialized from JSON by FileStorage
+        self.assertIn(key, storage._FileStorage__objects.keys())
+        storage._FileStorage__objects = dict()
+        storage.reload()
+        self.assertIn(key, storage._FileStorage__objects.keys())

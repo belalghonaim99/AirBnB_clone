@@ -1,172 +1,205 @@
 #!/usr/bin/python3
-"""
-Defines unit tests for the FileStorage class in the models/engine/file_storage.py module.
-
-Unittest classes:
-    TestFileStorageInstantiation
-    TestFileStorageMethods
-"""
-
-import os
-import json
-import models
+"""Unittest for file_storage after task 5."""
 import unittest
-from datetime import datetime
 from models.base_model import BaseModel
 from models.engine.file_storage import FileStorage
-from models.user import User
-from models.state import State
-from models.place import Place
-from models.city import City
-from models.amenity import Amenity
-from models.review import Review
+import json
+import os
+from shutil import copy2
 
 
-class TestFileStorageInstantiation(unittest.TestCase):
-    """Unit tests for testing instantiation of the FileStorage class."""
-
-    def test_FileStorage_instantiation_no_args(self):
-        self.assertEqual(type(FileStorage()), FileStorage)
-
-    def test_FileStorage_instantiation_with_arg(self):
-        with self.assertRaises(TypeError):
-            FileStorage(None)
-
-    def test_FileStorage_file_path_is_private_str(self):
-        self.assertEqual(str, type(FileStorage._FileStorage__file_path))
-
-    def testFileStorage_objects_is_private_dict(self):
-        self.assertEqual(dict, type(FileStorage._FileStorage__objects))
-
-    def test_storage_initializes(self):
-        self.assertEqual(type(models.storage), FileStorage)
-
-
-class TestFileStorageMethods(unittest.TestCase):
-    """Unit tests for testing methods of the FileStorage class."""
+class TestFileStorage(unittest.TestCase):
+    """Tests `FileStorage` class.
+    """
+    __objects_backup = FileStorage._FileStorage__objects
+    json_file = FileStorage._FileStorage__file_path
+    json_file_backup = FileStorage._FileStorage__file_path + '.bup'
 
     @classmethod
     def setUpClass(cls):
-        try:
-            os.rename("file.json", "tmp")
-        except IOError:
-            pass
+        """Setup for all tests in module.
+        """
+        FileStorage._FileStorage__objects = dict()
+        if os.path.exists(cls.json_file):
+            copy2(cls.json_file, cls.json_file_backup)
+            os.remove(cls.json_file)
 
     @classmethod
     def tearDownClass(cls):
+        """Teardown after all tests in module.
+        """
+        FileStorage._FileStorage__objects = cls.__objects_backup
+        if os.path.exists(cls.json_file_backup):
+            copy2(cls.json_file_backup, cls.json_file)
+            os.remove(cls.json_file_backup)
+
+    def tearDown(self):
+        """Any needed cleanup, per test method.
+        """
         try:
-            os.remove("file.json")
-        except IOError:
+            del (fs1, fs2, fs3, fs4)
+        except NameError:
             pass
         try:
-            os.rename("tmp", "file.json")
-        except IOError:
+            del (bm1, bm2, bm3, bm4)
+        except NameError:
             pass
-        FileStorage._FileStorage__objects = {}
+        FileStorage._FileStorage__objects = dict()
+        if os.path.exists(type(self).json_file):
+            os.remove(type(self).json_file)
+
+    def test_FileStorage(self):
+        """Task 5. Store first object
+        Tests instantiation of class `FileStorage` and use in models__init__.
+        """
+        # TypeError: any args
+        self.assertRaises(TypeError, FileStorage, 'arg')
+        # no args
+        fs1 = FileStorage()
+        self.assertIsInstance(fs1, FileStorage)
+        # Normal use: as `storage` attr in models.__init__, imprtd to BaseModel
+        bm1 = BaseModel()
+        from models import storage
+        self.assertIsInstance(storage, FileStorage)
+
+    def test___file_path(self):
+        """Task 5. Store first object
+        Tests private class attribute `__file_path`.
+        """
+        fs1 = FileStorage()
+        # new FileStorage object has __file_path
+        self.assertIsNotNone(fs1._FileStorage__file_path)
+        # __file_path is a string
+        __file_path = fs1._FileStorage__file_path
+        self.assertIsInstance(__file_path, str)
+        # __file_path ends in '.json'
+        self.assertEqual(__file_path[-5:], '.json')
+        # __file_path is writable (permissions)
+        content = 'Test text 0123456789abcdefghijklmnopqrstuvwxyz'
+        with open(__file_path, 'w', encoding='utf-8') as file:
+            file.write(content)
+        with open(__file_path, 'r', encoding='utf-8') as file:
+            self.assertEqual(content, file.read())
+
+    def test___objects(self):
+        """Task 5. Store first object
+        Tests private class attribute `__objects`.
+        """
+        fs1 = FileStorage()
+        # new FileStorage object has __objects
+        self.assertIsNotNone(fs1._FileStorage__objects)
+        # __objects is a dict
+        __objects = fs1._FileStorage__objects
+        self.assertIsInstance(__objects, dict)
+        # __objects is empty to start
+        self.assertEqual(len(__objects), 0)
+        # __objects can store item with key:'<obj class name>.id', value: obj
+        bm1 = BaseModel()
+        bm1_dict = bm1.to_dict()
+        bm1__objects_key = bm1_dict['__class__'] + '.' + bm1.id
+        __objects[bm1__objects_key] = bm1
+        self.assertIn(bm1__objects_key, __objects)
+        self.assertEqual(__objects[bm1__objects_key], bm1)
 
     def test_all(self):
-        self.assertEqual(dict, type(models.storage.all()))
-
-    def test_all_with_arg(self):
-        with self.assertRaises(TypeError):
-            models.storage.all(None)
+        """Task 5. Store first object
+        Tests public instance method `all()`.
+        """
+        fs1 = FileStorage()
+        # TypeError: any args
+        self.assertRaises(TypeError, fs1.all, 'arg')
+        # Normal use: no args
+        fs1__objects = fs1.all()
+        # returns __objects
+        self.assertEqual(fs1._FileStorage__objects, fs1__objects)
 
     def test_new(self):
-        bm = BaseModel()
-        us = User()
-        st = State()
-        pl = Place()
-        cy = City()
-        am = Amenity()
-        rv = Review()
-        models.storage.new(bm)
-        models.storage.new(us)
-        models.storage.new(st)
-        models.storage.new(pl)
-        models.storage.new(cy)
-        models.storage.new(am)
-        models.storage.new(rv)
-        self.assertIn("BaseModel." + bm.id, models.storage.all().keys())
-        self.assertIn(bm, models.storage.all().values())
-        self.assertIn("User." + us.id, models.storage.all().keys())
-        self.assertIn(us, models.storage.all().values())
-        self.assertIn("State." + st.id, models.storage.all().keys())
-        self.assertIn(st, models.storage.all().values())
-        self.assertIn("Place." + pl.id, models.storage.all().keys())
-        self.assertIn(pl, models.storage.all().values())
-        self.assertIn("City." + cy.id, models.storage.all().keys())
-        self.assertIn(cy, models.storage.all().values())
-        self.assertIn("Amenity." + am.id, models.storage.all().keys())
-        self.assertIn(am, models.storage.all().values())
-        self.assertIn("Review." + rv.id, models.storage.all().keys())
-        self.assertIn(rv, models.storage.all().values())
-
-    def test_new_with_args(self):
-        with self.assertRaises(TypeError):
-            models.storage.new(BaseModel(), 1)
+        """Task 5. Store first object
+        Tests public instance method `new()`. See also
+        TestBaseModel.test_BaseModel.
+        """
+        fs1 = FileStorage()
+        # TypeError: no args
+        self.assertRaises(TypeError, fs1.new)
+        # TypeError: 2+ args
+        self.assertRaises(TypeError, fs1.new, 'arg1', 'arg2')
+        # called in BaseModel.__init__, to include new BM obj in __objects
+        bm1 = BaseModel()
+        from models import storage
+        self.assertIn(bm1, storage._FileStorage__objects.values())
+        # KeyError: __dict__ of arg obj doesn't include `id`
+        # <arg obj>.id not string
+        # Normal use: 1 arg of obj whose __dict__ includes `id`
+        # cls.__objects updated with key:'<obj class name>.id', value: obj
+        # key:'<obj class name>.id' already in self.__objects
 
     def test_save(self):
-        bm = BaseModel()
-        us = User()
-        st = State()
-        pl = Place()
-        cy = City()
-        am = Amenity()
-        rv = Review()
-        models.storage.new(bm)
-        models.storage.new(us)
-        models.storage.new(st)
-        models.storage.new(pl)
-        models.storage.new(cy)
-        models.storage.new(am)
-        models.storage.new(rv)
-        models.storage.save()
-        save_text = ""
-        with open("file.json", "r") as f:
-            save_text = f.read()
-            self.assertIn("BaseModel." + bm.id, save_text)
-            self.assertIn("User." + us.id, save_text)
-            self.assertIn("State." + st.id, save_text)
-            self.assertIn("Place." + pl.id, save_text)
-            self.assertIn("City." + cy.id, save_text)
-            self.assertIn("Amenity." + am.id, save_text)
-            self.assertIn("Review." + rv.id, save_text)
-
-    def test_save_with_arg(self):
-        with self.assertRaises(TypeError):
-            models.storage.save(None)
+        """Task 5. Store first object
+        Tests public instance method `save()`. See also
+        TestBaseModel.test_save()
+        """
+        fs1 = FileStorage()
+        # TypeError: any args
+        self.assertRaises(TypeError, fs1.save, 'arg')
+        # Correct use: no args
+        fs1.save()
+        # Normal use: called by BaseModel.save(), writes to __file_path
+        self.assertTrue(os.path.isfile(fs1._FileStorage__file_path))
+        # writes to __file_path a JSON serialized string of __objects
+        with open(fs1._FileStorage__file_path, encoding='utf-8') as file:
+            contents = file.read()
+        self.assertEqual(json.loads(contents), fs1._FileStorage__objects)
 
     def test_reload(self):
-        bm = BaseModel()
-        us = User()
-        st = State()
-        pl = Place()
-        cy = City()
-        am = Amenity()
-        rv = Review()
-        models.storage.new(bm)
-        models.storage.new(us)
-        models.storage.new(st)
-        models.storage.new(pl)
-        models.storage.new(cy)
-        models.storage.new(am)
-        models.storage.new(rv)
-        models.storage.save()
-        models.storage.reload()
-        objs = FileStorage._FileStorage__objects
-        self.assertIn("BaseModel." + bm.id, objs)
-        self.assertIn("User." + us.id, objs)
-        self.assertIn("State." + st.id, objs)
-        self.assertIn("Place." + pl.id, objs)
-        self.assertIn("City." + cy.id, objs)
-        self.assertIn("Amenity." + am.id, objs)
-        self.assertIn("Review." + rv.id, objs)
+        """Task 5. Store first object
+        Tests public instance method `reload()`.
+        """
+        fs1 = FileStorage()
+        # TypeError: any args
+        self.assertRaises(TypeError, fs1.reload, 'arg')
+        # Normal use: no args, file contains string compatible with json.load()
+        fs1.save()
+        self.assertTrue(os.path.isfile(fs1._FileStorage__file_path))
+        fs1.reload()
+        with open(fs1._FileStorage__file_path, encoding='utf-8') as file:
+            self.assertEqual(json.load(file), fs1._FileStorage__objects)
+        # if __file_path does not exist, do nothing, no exception raised
+        fs2 = FileStorage()
+        __objects_pre_reload = fs2._FileStorage__objects
+        fs2.save()
+        os.remove(fs2._FileStorage__file_path)
+        fs2.reload()
+        self.assertEqual(fs2._FileStorage__objects, __objects_pre_reload)
+        # file exists already but doesn't contain JSON format string
+        __file_path = fs2._FileStorage__file_path
+        content = 'Test text 0123456789abcdefghijklmnopqrstuvwxyz'
+        with open(__file_path, 'w+', encoding='utf-8') as file:
+            file.write(content)
+            print(file.read())
+            self.assertRaises(ValueError, fs2.reload)
+        # KeyError: object in .json file has no `id` attribute
+        # cls.__objects updated with key:'<obj class name>.id', value: obj
+        # key:'<obj class name>.id' already in self.__objects
 
-    def test_reload_with_arg(self):
-        with self.assertRaises(TypeError):
-            models.storage.reload(None)
+    def test_models___init__1(self):
+        """Task 5. Store first object
+        Tests `models.__init__` for its use of `FileStorage` on instantiation
+        of subclasses.
+        Separated into 2 test methods to run `models.__init__` once per method.
+        """
+        bm1 = BaseModel()
+        # `storage` attr created
+        from models import storage
+        self.assertIsNotNone(storage)
+        # `storage` is a `FileStorage` object
+        self.assertIsInstance(storage, FileStorage)
 
+    def test_models___init__2(self):
+        """Task 5. Store first object
+        Tests `models.__init__` for its use of `FileStorage` on instantiation
+        of subclasses.
 
-if __name__ == "__main__":
-    unittest.main()
+        Separated into 2 test methods to run `models.__init__` once per method.
+        """
 
+        pass

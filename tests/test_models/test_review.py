@@ -1,202 +1,88 @@
 #!/usr/bin/python3
-"""
-Defines unit tests for the Review class in the models/review.py module.
-
-Unittest classes:
-    TestReviewInstantiation
-    TestReviewSave
-    TestReviewToDict
-"""
-
-import os
-import models
+"""Unittest for review([..]) after task 9"""
 import unittest
-from datetime import datetime
-from time import sleep
+import json
+import os
+from shutil import copy2
+
 from models.review import Review
-
-class TestReviewInstantiation(unittest.TestCase):
-    """Unit tests for testing instantiation of the Review class."""
-
-    def test_no_args_instantiates(self):
-        self.assertEqual(Review, type(Review()))
-
-    def test_new_instance_stored_in_objects(self):
-        self.assertIn(Review(), models.storage.all().values())
-
-    def test_id_is_public_str(self):
-        self.assertEqual(str, type(Review().id))
-
-    def test_created_at_is_public_datetime(self):
-        self.assertEqual(datetime, type(Review().created_at))
-
-    def test_updated_at_is_public_datetime(self):
-        self.assertEqual(datetime, type(Review().updated_at))
-
-    def test_place_id_is_public_class_attribute(self):
-        review_instance = Review()
-        self.assertEqual(str, type(Review.place_id))
-        self.assertIn("place_id", dir(review_instance))
-        self.assertNotIn("place_id", review_instance.__dict__)
-
-    def test_user_id_is_public_class_attribute(self):
-        review_instance = Review()
-        self.assertEqual(str, type(Review.user_id))
-        self.assertIn("user_id", dir(review_instance))
-        self.assertNotIn("user_id", review_instance.__dict__)
-
-    def test_text_is_public_class_attribute(self):
-        review_instance = Review()
-        self.assertEqual(str, type(Review.text))
-        self.assertIn("text", dir(review_instance))
-        self.assertNotIn("text", review_instance.__dict__)
-
-    def test_two_reviews_unique_ids(self):
-        review1 = Review()
-        review2 = Review()
-        self.assertNotEqual(review1.id, review2.id)
-
-    def test_two_reviews_different_created_at(self):
-        review1 = Review()
-        sleep(0.05)
-        review2 = Review()
-        self.assertLess(review1.created_at, review2.created_at)
-
-    def test_two_reviews_different_updated_at(self):
-        review1 = Review()
-        sleep(0.05)
-        review2 = Review()
-        self.assertLess(review1.updated_at, review2.updated_at)
-
-    def test_str_representation(self):
-        dt = datetime.today()
-        dt_repr = repr(dt)
-        review = Review()
-        review.id = "123456"
-        review.created_at = review.updated_at = dt
-        review_str = review.__str__()
-        self.assertIn("[Review] (123456)", review_str)
-        self.assertIn("'id': '123456'", review_str)
-        self.assertIn("'created_at': " + dt_repr, review_str)
-        self.assertIn("'updated_at': " + dt_repr, review_str)
-
-    def test_args_unused(self):
-        review = Review(None)
-        self.assertNotIn(None, review.__dict__.values())
-
-    def test_instantiation_with_kwargs(self):
-        dt = datetime.today()
-        dt_iso = dt.isoformat()
-        review = Review(id="345", created_at=dt_iso, updated_at=dt_iso)
-        self.assertEqual(review.id, "345")
-        self.assertEqual(review.created_at, dt)
-        self.assertEqual(review.updated_at, dt)
-
-    def test_instantiation_with_None_kwargs(self):
-        with self.assertRaises(TypeError):
-            Review(id=None, created_at=None, updated_at=None)
+from models import storage
 
 
-class TestReviewSave(unittest.TestCase):
-    """Unit tests for testing the save method of the Review class."""
+class TestReview(unittest.TestCase):
+    """Tests `Review` class.
+    For interactions with *args and **kwargs, see test_base_model.
+    Attributes:
+        __objects_backup (dict): copy of current dict of `FileStorage` objects
+        json_file (str): filename for JSON file of `FileStorage` objects
+        json_file_backup (str): filename for backup of `json_file`
+    """
+    __objects_backup = storage._FileStorage__objects
+    json_file = storage._FileStorage__file_path
+    json_file_backup = storage._FileStorage__file_path + '.bup'
 
     @classmethod
-    def setUp(cls):
+    def setUpClass(cls):
+        """Setup for all tests in module.
+        """
+        storage._FileStorage__objects = dict()
+        if os.path.exists(cls.json_file):
+            copy2(cls.json_file, cls.json_file_backup)
+            os.remove(cls.json_file)
+
+    @classmethod
+    def tearDownClass(cls):
+        """Teardown after all tests in module.
+        """
+        storage._FileStorage__objects = cls.__objects_backup
+        if os.path.exists(cls.json_file_backup):
+            copy2(cls.json_file_backup, cls.json_file)
+            os.remove(cls.json_file_backup)
+
+    def tearDown(self):
+        """Any needed cleanup, per test method.
+        """
         try:
-            os.rename("file.json", "tmp")
-        except IOError:
+            del (r1, r2)
+        except NameError:
             pass
+        storage._FileStorage__objects = dict()
+        if os.path.exists(type(self).json_file):
+            os.remove(type(self).json_file)
 
-    def tearDown(cls):
-        try:
-            os.remove("file.json")
-        except IOError:
-            pass
-        try:
-            os.rename("tmp", "file.json")
-        except IOError:
-            pass
+    def test_Review(self):
+        """Task 9
+        Tests `Review` class.
+        """
+        # Normal use: no args
+        r1 = Review()
+        self.assertIsInstance(r1, Review)
 
-    def test_one_save(self):
-        review_instance = Review()
-        sleep(0.05)
-        first_updated_at = review_instance.updated_at
-        review_instance.save()
-        self.assertLess(first_updated_at, review_instance.updated_at)
+        # attr `place_id` defaults to empty string
+        self.assertIsInstance(r1.place_id, str)
+        self.assertEqual(r1.place_id, '')
 
-    def test_two_saves(self):
-        review_instance = Review()
-        sleep(0.05)
-        first_updated_at = review_instance.updated_at
-        review_instance.save()
-        second_updated_at = review_instance.updated_at
-        self.assertLess(first_updated_at, second_updated_at)
-        sleep(0.05)
-        review_instance.save()
-        self.assertLess(second_updated_at, review_instance.updated_at)
+        # attr `user_id` defaults to empty string
+        self.assertIsInstance(r1.user_id, str)
+        self.assertEqual(r1.user_id, '')
 
-    def test_save_with_arg(self):
-        review_instance = Review()
-        with self.assertRaises(TypeError):
-            review_instance.save(None)
+        # attr `text` defaults to empty string
+        self.assertIsInstance(r1.text, str)
+        self.assertEqual(r1.text, '')
 
-    def test_save_updates_file(self):
-        review_instance = Review()
-        review_instance.save()
-        review_id = "Review." + review_instance.id
-        with open("file.json", "r") as f:
-            self.assertIn(review_id, f.read())
+        # Review can be serialized to JSON by FileStorage
+        r1.place_id = 'test'
+        r1.user_id = 'test'
+        r1.text = 'test'
+        self.assertIn(r1, storage._FileStorage__objects.values())
+        r1.save()
+        with open(storage._FileStorage__file_path, encoding='utf-8') as file:
+            content = file.read()
+        key = r1.__class__.__name__ + '.' + r1.id
+        self.assertIn(key, json.loads(content))
 
-
-class TestReviewToDict(unittest.TestCase):
-    """Unit tests for testing the to_dict method of the Review class."""
-
-    def test_to_dict_type(self):
-        self.assertTrue(dict, type(Review().to_dict()))
-
-    def test_to_dict_contains_correct_keys(self):
-        review_instance = Review()
-        self.assertIn("id", review_instance.to_dict())
-        self.assertIn("created_at", review_instance.to_dict())
-        self.assertIn("updated_at", review_instance.to_dict())
-        self.assertIn("__class__", review_instance.to_dict())
-
-    def test_to_dict_contains_added_attributes(self):
-        review_instance = Review()
-        review_instance.middle_name = "Holberton"
-        review_instance.my_number = 98
-        self.assertEqual("Holberton", review_instance.middle_name)
-        self.assertIn("my_number", review_instance.to_dict())
-
-    def test_to_dict_datetime_attributes_are_strs(self):
-        review_instance = Review()
-        review_dict = review_instance.to_dict()
-        self.assertEqual(str, type(review_dict["id"]))
-        self.assertEqual(str, type(review_dict["created_at"]))
-        self.assertEqual(str, type(review_dict["updated_at"]))
-
-    def test_to_dict_output(self):
-        dt = datetime.today()
-        review_instance = Review()
-        review_instance.id = "123456"
-        review_instance.created_at = review_instance.updated_at = dt
-        expected_dict = {
-            'id': '123456',
-            '__class__': 'Review',
-            'created_at': dt.isoformat(),
-            'updated_at': dt.isoformat(),
-        }
-        self.assertDictEqual(review_instance.to_dict(), expected_dict)
-
-    def test_contrast_to_dict_dunder_dict(self):
-        review_instance = Review()
-        self.assertNotEqual(review_instance.to_dict(), review_instance.__dict__)
-
-    def test_to_dict_with_arg(self):
-        review_instance = Review()
-        with self.assertRaises(TypeError):
-            review_instance.to_dict(None)
-
-
-if __name__ == "__main__":
-    unittest.main()
+        # Review can be deserialized from JSON by FileStorage
+        self.assertIn(key, storage._FileStorage__objects.keys())
+        storage._FileStorage__objects = dict()
+        storage.reload()
+        self.assertIn(key, storage._FileStorage__objects.keys())
