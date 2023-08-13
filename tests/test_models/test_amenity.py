@@ -1,5 +1,5 @@
 #!/usr/bin/python3
-"""Unittest for amenity([..]) after task 9"""
+"""Unit tests for the Amenity class after Task 9."""
 import unittest
 import json
 import os
@@ -8,23 +8,15 @@ from shutil import copy2
 from models.amenity import Amenity
 from models import storage
 
-
 class TestAmenity(unittest.TestCase):
-    """Tests `Amenity` class.
-    For interactions with *args and **kwargs, see test_base_model.
-    Attributes:
-        __objects_backup (dict): copy of current dict of `FileStorage` objects
-        json_file (str): filename for JSON file of `FileStorage` objects
-        json_file_backup (str): filename for backup of `json_file`
-    """
+    """Tests the Amenity class."""
     __objects_backup = storage._FileStorage__objects
     json_file = storage._FileStorage__file_path
     json_file_backup = storage._FileStorage__file_path + '.bup'
 
     @classmethod
     def setUpClass(cls):
-        """Setup for all tests in module.
-        """
+        """Set up for all tests in the module."""
         storage._FileStorage__objects = dict()
         if os.path.exists(cls.json_file):
             copy2(cls.json_file, cls.json_file_backup)
@@ -32,33 +24,29 @@ class TestAmenity(unittest.TestCase):
 
     @classmethod
     def tearDownClass(cls):
-        """Teardown after all tests in module.
-        """
+        """Tear down after all tests in the module."""
         storage._FileStorage__objects = cls.__objects_backup
         if os.path.exists(cls.json_file_backup):
             copy2(cls.json_file_backup, cls.json_file)
             os.remove(cls.json_file_backup)
 
     def tearDown(self):
-        """Any needed cleanup, per test method.
-        """
+        """Clean up after each test method."""
         try:
-            del (a1, a2)
+            del a1, a2
         except NameError:
             pass
         storage._FileStorage__objects = dict()
         if os.path.exists(type(self).json_file):
             os.remove(type(self).json_file)
 
-    def test_Amenity(self):
-        """Task 9
-        Tests `Amenity` class.
-        """
+    def test_amenity_class(self):
+        """Tests the Amenity class after Task 9."""
         # Normal use: no args
         a1 = Amenity()
         self.assertIsInstance(a1, Amenity)
 
-        # attr `name` defaults to empty string
+        # Attribute `name` defaults to an empty string
         self.assertIsInstance(a1.name, str)
         self.assertEqual(a1.name, '')
 
@@ -76,3 +64,7 @@ class TestAmenity(unittest.TestCase):
         storage._FileStorage__objects = dict()
         storage.reload()
         self.assertIn(key, storage._FileStorage__objects.keys())
+
+if __name__ == '__main__':
+    unittest.main()
+
