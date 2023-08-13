@@ -1,5 +1,7 @@
-#!/usr/bin/python3
-"""Unit tests for the Amenity class after Task 9."""
+"""
+Unit tests for the Amenity class after Task 9.
+"""
+
 import unittest
 import json
 import os
@@ -8,8 +10,10 @@ from shutil import copy2
 from models.amenity import Amenity
 from models import storage
 
+
 class TestAmenity(unittest.TestCase):
     """Tests the Amenity class."""
+
     __objects_backup = storage._FileStorage__objects
     json_file = storage._FileStorage__file_path
     json_file_backup = storage._FileStorage__file_path + '.bup'
@@ -65,6 +69,6 @@ class TestAmenity(unittest.TestCase):
         storage.reload()
         self.assertIn(key, storage._FileStorage__objects.keys())
 
+
 if __name__ == '__main__':
     unittest.main()
-
