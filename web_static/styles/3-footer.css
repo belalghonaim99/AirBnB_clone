@@ -2,12 +2,10 @@ footer {
 	background-color: white;
 	height: 60px;
 	width: 100%;
-	border-top: 1px #CCCCCC;
+	border-top: 1px solid #CCCCCC;
 	bottom: 0;
-	position: absolute;
+	position: fixed ;
 	display: grid;
-}
-footer p {
 	text-align: center;
-	margin: 10px;
+
 }
